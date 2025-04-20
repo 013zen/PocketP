@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pocket Philosopher</title>
+  <style>
+    body {
+      background-color: #000;
+      background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23664d8e' fill-opacity='0.42'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+      animation: movePattern 6s linear infinite;
+      font-family: 'Georgia', serif;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      overflow-y: auto;
+      height: 100vh;
+      margin: 0;
+    }
+
+    @keyframes movePattern {
+      from { background-position: 0 0; }
+      to { background-position: 30px 30px; }
+    }
+
+    h1 {
+      font-size: 2em;
+      color: #e0c97f;
+      margin-bottom: 20px;
+    }
+
+    #thought {
+      width: 100%;
+      max-width: 600px;
+      padding: 12px;
+      font-size: 1em;
+      background: #2c2c2c;
+      color: #f0f0f0;
+      border: 1px solid #555;
+      border-radius: 6px;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #e0c97f;
+      color: #1e1e1e;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #d6b75f;
+    }
+
+    #resolved-banners {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+
+    .resolved-banner {
+      background-color: #d2f8d2;
+      border-left: 6px solid #4CAF50;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 14px;
+      border-radius: 6px;
+      opacity: 1;
+      transition: opacity 1s ease-out;
+      color: #222;
+    }
+
+    .resolved-banner.fade-out {
+      opacity: 0;
+    }
+
+    #response, #map-updates {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+
+    .bubble {
+      background: #2c2c2c;
+      padding: 16px;
+      border-left: 4px solid #e0c97f;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .active-structure {
+      background: #444;
+      padding: 10px;
+      border-left: 4px solid #e0c97f;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 0.95em;
+      font-style: italic;
+      color: #f5f5f5;
+    }
+
+    .map-entry {
+      background: #222;
+      padding: 12px;
+      border-left: 4px solid #6fb3ff;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 0.9em;
+      color: #b3d7ff;
+    }
+
+    .loading-dots span {
+      animation: blink 1.2s infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    #welcome-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal-content {
+      background-color: #1c1c1c;
+      border: 2px solid #e0c97f;
+      padding: 30px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      color: #f0f0f0;
+      text-align: center;
+      font-family: 'Georgia', serif;
+      line-height: 1.6;
+    }
+
+    .modal-content h2 {
+      color: #e0c97f;
+      margin-bottom: 16px;
+    }
+
+    .modal-content button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #e0c97f;
+      color: #1e1e1e;
+      border: none;
+      border-radius: 4px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background-color: #d6b75f;
+    }
+
+
+
+#thoughtmap {
+  width: 600px;
+  height: 400px;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+
+#thoughtmap svg {
+  touch-action: none;
+  cursor: grab;
+overflow: visible;
+}
+
+
+#philosopherPicker {
+  margin-bottom: 16px;
+}
+
+
+
+
+  </style>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/static/js/thoughtmap_viz.js"></script>
+
+</head>
+<body>
+
+
+
+
+
+<div id="welcome-modal">
+  <div class="modal-content">
+    <h2>🧭 Welcome to Pocket Philosopher</h2>
+    <p>This space is a little different.</p>
+    <p>It won’t give you advice or tell you what to do. Instead, it helps you uncover the patterns and tensions in your thinking — and reflect more clearly.</p>
+    <p>If it feels abstract at times, that's by design. This is a space for reflection, not reaction.</p>
+    <p>It won’t answer your questions. It will help you discover the questions behind them.</p>
+    <p>Put thought into your responses, and it will help explore the tensions, beliefs, and motivations behind them.</p>
+    <button onclick="closeModal()">Got it</button>
+  </div>
+</div>
+
+<h1>Pocket Philosopher</h1>
+
+
+<div style="margin-bottom: 20px;">
+  <select id="philosopherPicker" onchange="changePhilosopherSprite(this.value)">
+    <option value="linetalk">Classic Philosopher</option>
+    <option value="hat">Hat</option>
+    <option value="stash">Stash</option>
+    <option value="hair">Hair</option>
+<option value="clown">Clown Nose</option>
+<option value="steam">Steam Punk</option>
+<option value="staff">Staff</option>
+<option value="dbz">Saiyan</option>
+<option value="bow">Bow</option>
+<option value="pipe">Pipe</option>
+<option value="niet">Nietzsche</option>
+<option value="witt">Wittgenstein</option>
+  </select>
+</div>
+
+<canvas id="philosopher" width="128" height="150"></canvas>
+
+
+
+
+
+
+
+
+<textarea id="thought" placeholder="Share your thought..." rows="4"></textarea>
+<button onclick="submitThought()">Reflect</button>
+
+<div style="margin-top: 30px;">
+  <button onclick="showTab('chat')">🧠 Chat</button>
+<button onclick="showTab('updates')">🗺️ Map Updates</button>
+<button onclick="showTab('history')">📜 History</button>
+<button onclick="showTab('map')">🌌 Thought Map</button>
+
+
+<div id="history-panel" style="display:none; width:100%; max-width:600px; margin-top:20px;"></div>
+
+<div id="thoughtmap-panel" style="display:none; width:100%; max-width:600px; margin-top:20px;">
+  <h2>🧠 Thought Map</h2>
+  <div id="thoughtmap" style="width: 600px; height: 300px;"></div>
+</div>
+
+
+
+<div id="resolved-banners"></div>
+<div id="response"></div>
+<div id="map-updates" style="display: none;"></div>
+
+
+<audio id="bg-music" autoplay loop></audio>
+
+
+
+
+</body>
+
+<script>
+
+
+
+const resolvedStructureIds = window.resolvedStructureIds || [];
+
+
+
+
+  const textarea = document.getElementById("thought");
+  const responseDiv = document.getElementById("response");
+  const updatesDiv = document.getElementById("map-updates");
+  const bannersDiv = document.getElementById("resolved-banners");
+  const username = "013zen";
+
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitThought();
+    }
+  });
+
+
+
+const idleFrames = [0, 2, 3];
+let idleIndex = 0;
+
+function startIdleAnimation() {
+  if (!spriteReady) return;
+  if (animationInterval) clearTimeout(animationInterval);
+
+  function idleLoop() {
+    // Pick one of the idle frames with some repeat chance
+    const shouldRepeat = Math.random() < 0.4; // 40% chance to hold last frame
+    if (!shouldRepeat) {
+      currentFrame = idleFrames[Math.floor(Math.random() * idleFrames.length)];
+    }
+    drawFrame();
+
+    const delay = 800 + Math.random() * 500; // 800–1300ms
+    animationInterval = setTimeout(idleLoop, delay);
+  }
+
+  idleLoop();
+}
+
+
+
+const canvas = document.getElementById("philosopher");
+const ctx = canvas.getContext("2d");
+const offsetX = 4;
+
+const image = new Image();
+const frameWidth = 256;
+const frameHeight = 300;
+const displayWidth = 128;
+const displayHeight = 150;
+
+const frameNudges = [0, 1, 1, 2, 1, 1, 0, 0]; // optional, customize to your liking
+
+
+const idleFrame = 0; // first frame looks idle
+
+let currentFrame = idleFrame;
+let talkIndex = 0;
+let animationInterval = null;
+let spriteReady = false;
+
+
+
+// Load sprite and draw idle
+image.onload = () => {
+  console.log("✅ Sprite loaded");
+  console.log("Sprite size:", image.width, image.height);
+  spriteReady = true;
+  currentFrame = idleFrame;
+  drawFrame();
+};
+
+image.onerror = () => {
+  console.error("❌ Could not load sprite");
+};
+
+image.src = "/static/linetalk.png";
+
+// 🧠 Drawing logic
+function drawFrame() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const targetY = (canvas.height - displayHeight) / 2;
+  const nudge = frameNudges[currentFrame] || 0;
+  const targetX = (canvas.width - displayWidth) / 2 + nudge;
+
+  ctx.drawImage(
+    image,
+    currentFrame * frameWidth + offsetX, 0,
+    frameWidth - offsetX * 2, frameHeight,
+    targetX, targetY,
+    displayWidth, displayHeight
+  );
+
+  console.log("Current frame:", currentFrame, "| X:", targetX);
+  console.log(`Frame ${currentFrame} → Nudge ${frameNudges[currentFrame]}`);
+}
+
+const talkFrames = [0, 1, 2, 3, 4, 5, 6, 7]; // all talking frames
+
+function startTalkingAnimation() {
+  if (!spriteReady) return;
+
+  clearTimeout(animationInterval); // stop idle if needed
+  animationInterval = null;
+
+  function talkLoop() {
+    currentFrame = talkFrames[Math.floor(Math.random() * talkFrames.length)];
+    drawFrame();
+
+    const delay = 600 + Math.random() * 400; // 👈 600–1000ms
+    animationInterval = setTimeout(talkLoop, delay);
+  }
+
+  talkLoop();
+}
+
+
+
+const philosopherSprites = {
+  linetalk: "/static/linetalk.png",
+  hat: "/static/linetalkhat.png",
+  stash: "/static/linetalkstash.png",
+  hair: "/static/linetalkhair.png",
+clown: "/static/linetalkclown.png",
+steam: "/static/linetalksteam.png",
+staff: "/static/linetalkstaff.png",
+bow: "/static/linetalkbow.png",
+dbz: "/static/linetalkdbz.png",
+pipe: "/static/linetalkpipe.png",
+niet: "/static/linetalkniet.png",
+witt: "/static/linetalkwitt.png"
+  
+};
+
+function changePhilosopherSprite(type) {
+  const spritePath = philosopherSprites[type];
+  if (!spritePath) return;
+
+  clearTimeout(animationInterval);
+  animationInterval = null;
+
+  spriteReady = false;
+  currentFrame = idleFrame;
+
+  console.log("🔁 Switching to:", spritePath);
+  image.src = spritePath;
+}
+
+
+
+
+
+function stopTalkingAnimation() {
+  if (!spriteReady) return;
+
+  clearTimeout(animationInterval);
+  animationInterval = null;
+
+  idleIndex = 0;
+  startIdleAnimation();
+}
+
+
+
+image.onload = () => {
+  console.log("✅ Sprite loaded");
+  spriteReady = true;
+  currentFrame = idleFrame;
+  drawFrame();
+  startIdleAnimation(); // 👈 resumes idle after switching
+};
+
+
+
+
+
+
+  function showTab(tab) {
+  responseDiv.style.display = (tab === "chat") ? "block" : "none";
+  updatesDiv.style.display = (tab === "updates") ? "block" : "none";
+  document.getElementById("history-panel").style.display = (tab === "history") ? "block" : "none";
+  document.getElementById("thoughtmap-panel").style.display = (tab === "map") ? "block" : "none";
+
+  if (tab === "history") {
+    loadHistory(); // ✅ add this
+  }
+
+  if (tab === "map") {
+    setTimeout(() => {
+      if (!svg) initThoughtMapViz("#thoughtmap");
+      loadThoughtMap();
+    }, 100);
+  }
+}
+
+
+
+function removeResolvedItems(thoughtMap, resolvedIds = []) {
+  const resolvedSet = new Set(resolvedIds);
+  const cleaned = {};
+
+  for (const theme in thoughtMap) {
+    const section = thoughtMap[theme];
+    if (!section) continue;
+
+    const beliefs = (section.beliefs || []).filter(b => {
+      const sid = b.structure_id || b.source_structure_id;
+      return !resolvedSet.has(sid);
+    });
+
+    const tensions = (section.tensions || []).filter(t => {
+      const sid = t.structure_id || t.source_structure_id;
+      return !resolvedSet.has(sid);
+    });
+
+    cleaned[theme] = { ...section, beliefs, tensions };
+  }
+
+  return cleaned;
+}
+
+
+
+
+function loadThoughtMap() {
+  fetch(`/thoughtmap/${username}`)
+    .then(res => res.json())
+    .then(map => {
+      window.latestMap = map;
+
+      const resolvedIds = window.resolvedStructureIds || [];
+
+      const cleaned = removeResolvedItems(map, resolvedIds); // now passes the IDs
+      showMapAdditions(cleaned);
+      updateThoughtMap(cleaned);
+    })
+    .catch(err => {
+      console.warn("⚠️ Could not load saved thought map.");
+      console.error(err);
+    });
+}
+
+
+
+
+  function showResolvedBanner(domain, tension, belief) {
+    const banner = document.createElement('div');
+    banner.className = 'resolved-banner';
+    banner.innerHTML = `
+      ✅ <strong>Tension Resolved</strong><br>
+      <em>${domain}</em>: <strong>${tension}</strong><br>
+      Resolved by: “${belief}”
+    `;
+    bannersDiv.appendChild(banner);
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      setTimeout(() => banner.remove(), 1000);
+    }, 6000);
+  }
+
+  function appendBubble(content) {
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = content;
+    responseDiv.appendChild(bubble);
+    responseDiv.scrollTop = responseDiv.scrollHeight;
+  }
+
+
+
+
+
+
+  function showActiveStructure(structure) {
+  if (!structure) return;
+  const summary = structure.summary || "(unspecified)";
+  const type = structure.type || "unspecified";
+
+  const insight = document.createElement("div");
+  insight.className = "active-structure";
+  insight.innerHTML = `🧠 <strong>Focus:</strong> ${summary}<br><em>Type: ${type}</em>`;
+  responseDiv.appendChild(insight);
+}
+
+
+
+
+
+function showMapAdditions(thought_map) {
+  updatesDiv.innerHTML = ''; // Clear old ones
+
+  for (const theme in thought_map) {
+    const section = thought_map[theme];
+    if (!section) continue;
+
+    const { beliefs = [], tensions = [] } = section;
+
+    beliefs.forEach(belief => {
+      const beliefSummary = typeof belief === "object"
+        ? belief.summary || JSON.stringify(belief)
+        : String(belief);
+
+      const el = document.createElement("div");
+      el.className = "map-entry";
+      el.innerHTML = `🌱 <strong>${theme} belief added:</strong> ${beliefSummary}`;
+      updatesDiv.appendChild(el);
+    });
+
+    tensions.forEach(tension => {
+      const tensionSummary = typeof tension === "object"
+        ? tension.summary || JSON.stringify(tension)
+        : String(tension);
+
+      const el = document.createElement("div");
+      el.className = "map-entry";
+      el.innerHTML = `⚡ <strong>${theme} tension added:</strong> ${tensionSummary}`;
+      updatesDiv.appendChild(el);
+    });
+  }
+}
+
+
+
+
+
+function submitThought() {
+  const thought = textarea.value.trim();
+  if (!thought) return;
+
+  responseDiv.innerHTML = '<div class="loading-dots">Reflecting<span>.</span><span>.</span><span>.</span></div>';
+  bannersDiv.innerHTML = '';
+
+
+startTalkingAnimation();
+
+  fetch('/reflect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ thought, username })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const { response, followup, active_structure, tensions_resolved, thought_map } = data;
+
+
+stopTalkingAnimation();
+
+    showTab('chat');
+    responseDiv.innerHTML = '';
+
+    if (active_structure) showActiveStructure(active_structure);
+    if (response) appendBubble(response);
+    if (followup) appendBubble(followup);
+
+    if (thought_map) {
+      showMapAdditions(thought_map);
+      updateThoughtMap(thought_map);
+const resolvedIds = tensions_resolved?.map(t => t.structure_id) || [];
+window.resolvedStructureIds = resolvedIds;
+ // 🎉 visualization
+    }
+
+
+	if (tensions_resolved?.length) {
+  const resolvedIds = tensions_resolved.map(t => t.structure_id);
+  fadeOutResolvedNodes(resolvedIds);  // ⬅️ New
+}
+
+
+    if (tensions_resolved?.length) {
+      tensions_resolved.forEach(({ domain, tension, resolved_by }) => {
+        showResolvedBanner(domain, tension.summary || tension, resolved_by);
+      });
+    }
+
+    textarea.value = '';
+  });
+}
+
+window.onload = () => {
+  initThoughtMapViz("#thoughtmap");  // ✅ correct
+}
+
+
+  function closeModal() {
+    const modal = document.getElementById("welcome-modal");
+    modal.style.display = "none";
+  }
+
+
+
+
+function loadHistory() {
+  const panel = document.getElementById("history-panel");
+  panel.innerHTML = "<em>Loading full reflection history...</em>";
+
+  fetch(`/history/${username}`)
+    .then(res => res.json())
+    .then(dialogue => {
+      panel.innerHTML = ''; // Clear previous
+
+      dialogue.forEach(entry => {
+        const userBubble = document.createElement("div");
+        userBubble.className = "bubble";
+        userBubble.style.borderLeft = "4px solid #6fb3ff";
+        userBubble.textContent = `You: ${entry.user}`;
+        panel.appendChild(userBubble);
+
+        const aiBubble = document.createElement("div");
+        aiBubble.className = "bubble";
+        aiBubble.style.borderLeft = "4px solid #e0c97f";
+        aiBubble.textContent = `AI: ${entry.ai}`;
+        panel.appendChild(aiBubble);
+      });
+    })
+    .catch(err => {
+      panel.innerHTML = "Failed to load history.";
+      console.error(err);
+    });
+}
+
+
+window.onload = () => {
+  initThoughtMapViz("#thoughtmap");
+  loadHistory();
+  loadThoughtMap();
+
+  const music = document.getElementById("bg-music");
+  const tracks = [
+    "/static/music/511279__doctor_dreamchip__2020-03-17-lofi-trip-hop-doctor-dreamchip.wav",
+"/static/music/501796__doctor_dreamchip__2020-01-10.wav",
+"/static/music/424385__doctor_dreamchip__2018-04-05.wav",
+    "/static/music/514469__doctor_dreamchip__2020-04-12-keys.wav",
+    "/static/music/391438__andrewkn__cosmic-glow.wav",
+"/static/music/703713__zhr__chill-background-music-2.wav"
+  ];
+
+  const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+  music.src = randomTrack;
+
+  const resumeAudio = () => {
+    music.volume = 0.4;
+    music.play().catch(err => console.warn("Autoplay blocked:", err));
+    window.removeEventListener("click", resumeAudio);
+    window.removeEventListener("keydown", resumeAudio);
+  };
+
+  // Wait for user interaction
+  window.addEventListener("click", resumeAudio);
+  window.addEventListener("keydown", resumeAudio);
+};
+
+
+
+
+
+</script>
+</body>
+</html>
